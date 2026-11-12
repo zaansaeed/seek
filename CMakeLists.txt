@@ -11,3 +11,8 @@ add_subdirectory(third_party/llama.cpp)
 add_executable(spike_embed spike/embed_spike.cpp)
 target_link_libraries(spike_embed PRIVATE llama)
 target_compile_features(spike_embed PRIVATE cxx_std_20)
+
+# M0 spike: run the teacher reranker and check its scores against the model card. Real reranker lands in src/model/ in M4.
+add_executable(spike_rerank spike/rerank_spike.cpp)
+target_link_libraries(spike_rerank PRIVATE llama)
+target_compile_features(spike_rerank PRIVATE cxx_std_20)
