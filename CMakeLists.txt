@@ -1,23 +1,40 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)  # 3.25+ for add_subdirectory(... SYSTEM)
 project(seek LANGUAGES C CXX)
 
 # Write build/compile_commands.json so editor tooling (clangd) can find headers.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 17)
-# llama.cpp, pinned as a git submodule. Built as part of this project; gives us the `llama` target.
-add_subdirectory(third_party/llama.cpp)
 
-# M0 spike: load the embedder and sanity-check its vectors. Throwaway; the real embedder lands in src/model/ in M2.
-add_executable(spike_embed spike/embed_spike.cpp)
-target_link_libraries(spike_embed PRIVATE llama)
-target_compile_features(spike_embed PRIVATE cxx_std_20)
+# ---- Third-party code (pinned git submodules) ----
+# SYSTEM: their headers are included with -isystem, so our strict warnings don't fire on their code.
 
-# M0 spike: run the teacher reranker and check its scores against the model card. Real reranker lands in src/model/ in M4.
-add_executable(spike_rerank spike/rerank_spike.cpp)
-target_link_libraries(spike_rerank PRIVATE llama)
-target_compile_features(spike_rerank PRIVATE cxx_std_20)
+# llama.cpp: gives us the `llama` target.
+add_subdirectory(third_party/llama.cpp SYSTEM)
 
-# M0 spike: run a small BERT cross-encoder (the student's shape) and match PyTorch. Real student lands in src/model/ in M5.
-add_executable(spike_student spike/student_spike.cpp)
-target_link_libraries(spike_student PRIVATE llama)
-target_compile_features(spike_student PRIVATE cxx_std_20)
+# GoogleTest: gives us the `gtest` and `gtest_main` targets. We don't need GoogleMock or install rules.
+set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/googletest SYSTEM)
+
+# ---- Shared settings for all of seek's own targets ----
+# An INTERFACE library holds no code, only settings; anything that links it inherits them.
+add_library(seek_options INTERFACE)
+target_compile_features(seek_options INTERFACE cxx_std_20)
+target_compile_options(seek_options INTERFACE
+    $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:-Wall -Wextra -Wpedantic>)
+
+# ---- seek libraries (one per folder in src/) ----
+
+# text: turning raw text into index terms (tokenizer, later the full analyzer).
+add_library(seek_text
+    src/text/tokenizer.cpp)
+target_include_directories(seek_text PUBLIC src)  # so code writes #include "text/tokenizer.h"
+target_link_libraries(seek_text PUBLIC seek_options)
+
+# ---- Tests ----
+enable_testing()
+include(GoogleTest)
+
+add_executable(seek_tests
+    tests/text/tokenizer_test.cpp)
+target_link_libraries(seek_tests PRIVATE seek_text gtest_main)
+gtest_discover_tests(seek_tests)  # registers every TEST() with CTest, so `ctest` runs them
