@@ -3,7 +3,7 @@ project(seek LANGUAGES C CXX)
 
 # Write build/compile_commands.json so editor tooling (clangd) can find headers.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
+set(CMAKE_CXX_STANDARD 17)
 # llama.cpp, pinned as a git submodule. Built as part of this project; gives us the `llama` target.
 add_subdirectory(third_party/llama.cpp)
 
