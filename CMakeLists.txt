@@ -16,3 +16,8 @@ target_compile_features(spike_embed PRIVATE cxx_std_20)
 add_executable(spike_rerank spike/rerank_spike.cpp)
 target_link_libraries(spike_rerank PRIVATE llama)
 target_compile_features(spike_rerank PRIVATE cxx_std_20)
+
+# M0 spike: run a small BERT cross-encoder (the student's shape) and match PyTorch. Real student lands in src/model/ in M5.
+add_executable(spike_student spike/student_spike.cpp)
+target_link_libraries(spike_student PRIVATE llama)
+target_compile_features(spike_student PRIVATE cxx_std_20)
